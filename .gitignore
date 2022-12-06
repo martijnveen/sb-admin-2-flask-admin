@@ -1,6 +1,0 @@
-env
-*.pyc
-*.swp
-.DS_Store
-.vscode
-bower_components/

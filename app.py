@@ -1,54 +1,21 @@
-import os
-from flask import Flask, url_for, redirect, render_template, request, send_from_directory
+from fastapi import FastAPI
+from starlette.middleware.cors import CORSMiddleware
 
-import flask_admin as admin
-import flask_login as login
+from app.api.api_v1.api import api_router
+from app.core.config import settings
 
-from views import AdminIndexView, BlankView
-from user import User
+app = FastAPI(
+    title=settings.PROJECT_NAME, openapi_url=f"{settings.API_V1_STR}/openapi.json"
+)
 
-# Create Flask application
-app = Flask(__name__)
+# Set all CORS enabled origins
+if settings.BACKEND_CORS_ORIGINS:
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=[str(origin) for origin in settings.BACKEND_CORS_ORIGINS],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
 
-# bower_components
-@app.route('/bower_components/<path:path>')
-def send_bower(path):
-    return send_from_directory(os.path.join(app.root_path, 'bower_components'), path)
-
-@app.route('/dist/<path:path>')
-def send_dist(path):
-    return send_from_directory(os.path.join(app.root_path, 'dist'), path)
-
-@app.route('/js/<path:path>')
-def send_js(path):
-    return send_from_directory(os.path.join(app.root_path, 'js'), path)
-
-# Create dummy secrey key so we can use sessions
-app.config['SECRET_KEY'] = '123456790'
-
-# Initialize flask-login
-def init_login():
-    login_manager = login.LoginManager()
-    login_manager.init_app(app)
-
-    # Create user loader function
-    @login_manager.user_loader
-    def load_user(user_id):
-        return User.get(user_id)
-
-# Flask views
-@app.route('/')
-def index():
-    return render_template("sb-admin/redirect.html")
-
-# Initialize flask-login
-init_login()
-
-# Create admin
-admin = admin.Admin(app, 
-    'SB-Admin-2', 
-    index_view=AdminIndexView())
-#admin.add_view(BlankView(name='Blank', url='blank', endpoint='blank'))
-
-if __name__ == '__main__':
-    app.run(debug=True)
+app.include_router(api_router, prefix=settings.API_V1_STR)
